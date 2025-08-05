@@ -29,7 +29,7 @@ export default function HomePage() {
     const handleLogin = async () => {
         try {
             await login();
-            navigate('/dashboard');
+            navigate('/sets');
         } catch (error) {
             console.error("Failed to log in", error);
             // UPDATED: Use the custom alert modal instead of the native alert
@@ -42,7 +42,7 @@ export default function HomePage() {
     };
 
     // ... (ActionButton and FeatureCard components remain the same) ...
-    const ActionButton = ({ className = '' }) => ( currentUser ? ( <button onClick={() => navigate('/dashboard')} className={`bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:shadow-xl hover:shadow-green-500/40 ${className}`}> Go to Your Dashboard </button> ) : ( <button onClick={handleLogin} className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:shadow-xl hover:shadow-purple-500/40 flex items-center gap-3 ${className}`}> <GoogleLogo /> Get Started for Free </button> ) );
+    const ActionButton = ({ className = '' }) => ( currentUser ? ( <button onClick={() => navigate('/sets')} className={`bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:shadow-xl hover:shadow-green-500/40 ${className}`}> Go to Your Dashboard </button> ) : ( <button onClick={handleLogin} className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:shadow-xl hover:shadow-purple-500/40 flex items-center gap-3 ${className}`}> <GoogleLogo /> Get Started for Free </button> ) );
     const FeatureCard = ({ icon, title, children }) => ( <div className="bg-gray-800/50 p-8 rounded-2xl border border-gray-700/50 transform transition-all hover:scale-105 hover:bg-gray-800 hover:shadow-2xl hover:shadow-purple-500/20"> <div className="bg-gray-900 rounded-xl p-4 inline-block mb-6 border border-gray-700"> {icon} </div> <h3 className="text-2xl font-bold mb-3 text-white">{title}</h3> <p className="text-gray-400 leading-relaxed">{children}</p> </div> );
 
     return (

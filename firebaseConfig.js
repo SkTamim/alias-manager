@@ -1,19 +1,18 @@
-// src/firebaseConfig.js
+// src/firebaseConfig.js (or wherever your file is)
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth'; // <-- Import getAuth
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-// Your web app's Firebase configuration
+// Your web app's Firebase configuration, now read securely
 const firebaseConfig = {
-  apiKey: "AIzaSyDLraczg4bOLUIM2wmabgaM11I_bdXuv1c",
-  authDomain: "alias-manager-rh.firebaseapp.com",
-  projectId: "alias-manager-rh",
-  storageBucket: "alias-manager-rh.firebasestorage.app",
-  messagingSenderId: "479207591625",
-  appId: "1:479207591625:web:b81b5298cbaa76be788718"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase and export the services
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-export const auth = getAuth(app); // <-- Initialize and export auth
+export const auth = getAuth(app);

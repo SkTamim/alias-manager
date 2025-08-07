@@ -13,7 +13,6 @@ import {
   doc,
   onSnapshot,
   updateDoc,
-  writeBatch,
 } from 'firebase/firestore';
 import {
   useNavigate,
@@ -31,7 +30,7 @@ import { EmptyState } from '../components/dashboard/EmptyState';
 import { GoToTopButton } from '../components/GoToTopButton';
 import { Loader } from '../components/Loader';
 import { useAuth } from '../contexts/AuthContext';
-import { commandDictionary } from '../data/commandDictionary';
+import { useAliasImporter } from '../hooks/useAliasImporter';
 
 export default function DashboardPage() {
   // --- State Management ---
@@ -47,6 +46,10 @@ export default function DashboardPage() {
   const fileInputRef = useRef(null);
   const [alertProps, setAlertProps] = useState({ isOpen: false, title: '', message: '' });
   const [confirmProps, setConfirmProps] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  // --- Custom Hook for Importing ---
+  const getAliasesCollectionRef = () => collection(db, 'users', currentUser.uid, 'aliasSets', setId, 'aliases');
+  const { isProcessing: isProcessingAI, importAliases } = useAliasImporter(aliases, getAliasesCollectionRef, setAlertProps, setConfirmProps);
 
   // --- Data Fetching Effect ---
   useEffect(() => {
@@ -89,8 +92,6 @@ export default function DashboardPage() {
       }
     });
   };
-
-  const getAliasesCollectionRef = () => collection(db, 'users', currentUser.uid, 'aliasSets', setId, 'aliases');
 
   const handleSaveAlias = async (aliasData) => {
     const { id, ...data } = aliasData;
@@ -144,71 +145,12 @@ export default function DashboardPage() {
     a.click();
     document.body.removeChild(a);
   };
-
-  const handleFileImport = (e) => {
+  
+  const handleFileSelected = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const content = event.target.result;
-      const parsedAliases = [];
-      const seenKeysInFile = new Set();
-      content.split(/\r?\n/).forEach(line => {
-        line = line.trim();
-        if (!line || line.startsWith("'")) return;
-        const parts = line.split(/\s+/);
-        const key = parts[0];
-        let command = parts.slice(1).join(' ').replace(/"/g, '');
-        if (key && !seenKeysInFile.has(key.toLowerCase())) {
-          seenKeysInFile.add(key.toLowerCase());
-          let description = '';
-          const simpleCommand = command.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (commandDictionary[simpleCommand]) {
-            command = commandDictionary[simpleCommand].command;
-            description = commandDictionary[simpleCommand].description;
-          } else if (!command.startsWith("! _")) {
-            command = `! _${command}`;
-          }
-          parsedAliases.push({ key, command, description });
-        }
-      });
-      const existingKeys = new Set(aliases.map(a => a.key.toLowerCase()));
-      const newAliases = parsedAliases.filter(alias => !existingKeys.has(alias.key.toLowerCase()));
-      const skippedCount = parsedAliases.length - newAliases.length;
-      if (newAliases.length > 0) {
-        let message = `Found ${newAliases.length} new aliases to import.`;
-        if (skippedCount > 0) {
-          message += `\n\n${skippedCount} duplicate(s) were found and will be skipped.`;
-        }
-        message += "\n\nDo you want to continue?";
-        setConfirmProps({
-          isOpen: true,
-          title: 'Import Aliases',
-          message: message,
-          onConfirm: async () => {
-            try {
-              const batch = writeBatch(db);
-              newAliases.forEach(alias => {
-                const newDocRef = doc(getAliasesCollectionRef());
-                batch.set(newDocRef, alias);
-              });
-              await batch.commit();
-              setAlertProps({ isOpen: true, title: "Import Successful", message: `${newAliases.length} aliases have been added.` });
-            } catch (error) {
-              console.error("Error during batch import:", error);
-              setAlertProps({ isOpen: true, title: "Import Failed", message: "Could not import aliases." });
-            }
-          }
-        });
-      } else {
-        let message = "Could not find any new aliases to import.";
-        if (skippedCount > 0) {
-          message += ` All ${skippedCount} aliases from the file already exist in this set.`
-        }
-        setAlertProps({ isOpen: true, title: "Import Complete", message: message });
-      }
-    };
-    reader.readAsText(file);
+    if (file) {
+        importAliases(file);
+    }
     e.target.value = null;
   };
   
@@ -225,7 +167,7 @@ export default function DashboardPage() {
   // --- Render ---
   return (
     <div className="bg-gray-900 text-white min-h-screen p-4 md:p-8 font-sans">
-      {/* THE FIX IS HERE: The modal is now conditionally rendered */}
+      {/* THE FIX IS HERE: The modal is now correctly rendered only when isModalOpen is true */}
       {isModalOpen && <AliasModal alias={editingAlias} onClose={() => setIsModalOpen(false)} onSave={handleSaveAlias} />}
       
       <AlertModal isOpen={alertProps.isOpen} onClose={() => setAlertProps({ ...alertProps, isOpen: false })} title={alertProps.title}>{alertProps.message}</AlertModal>
@@ -234,18 +176,16 @@ export default function DashboardPage() {
       <div className="container mx-auto max-w-7xl">
         <DashboardHeader currentUser={currentUser} onLogout={handleLogout} />
         <main>
-          {isLoading ? (
+          {isProcessingAI ? (
+            <Loader text="AI is analyzing and describing your aliases..." />
+          ) : isLoading ? (
             <Loader text="Loading your aliases..." />
           ) : (
             <>
               <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-3xl font-bold text-white mb-6">
-                      Managing Set - <span className="text-purple-400">{setName}</span>
-                  </h2>
-                        {/* NEW: Added Alias Count Display */}
-                      <div className=" text-gray-400 text-lg">
-                          Total Aliases - <span className="font-bold text-white ms-0.5">{aliases.length}</span>
-                      </div>
+                <h2 className="text-3xl font-bold text-white mb-6">
+                  Managing Set - <span className="text-purple-400">{setName}</span>
+                </h2>
               </div>
               {aliases.length === 0 ? (
                 <EmptyState onCreate={handleCreateNew} onImport={() => fileInputRef.current.click()} />
@@ -268,7 +208,7 @@ export default function DashboardPage() {
               )}
             </>
           )}
-          <input type="file" ref={fileInputRef} onChange={handleFileImport} className="hidden" accept=".txt" />
+          <input type="file" ref={fileInputRef} onChange={handleFileSelected} className="hidden" accept=".txt" />
         </main>
       </div>
       
